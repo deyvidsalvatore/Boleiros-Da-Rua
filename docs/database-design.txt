@@ -1,0 +1,178 @@
+// ==========================================
+// NÚCLEO DE IDENTIDADE (Enterprise Identity)
+// ==========================================
+
+Table users {
+  id uuid [pk, note: "Gerado via UUID v4"]
+  full_name varchar(150) [not null]
+  email varchar(255) [unique, not null]
+  password_hash varchar(255) [not null]
+  education_level varchar(50) [not null, note: "Validação: Mínimo MEDIO_COMPLETO para Moderadores"]
+  profile_picture_url varchar(255)
+  active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  Note: "Entidade mestre de usuários."
+}
+
+Table roles {
+  id int [pk, increment]
+  name varchar(50) [unique, note: "ROLE_PLAYER, ROLE_MODERATOR, ROLE_ADMIN"]
+  description text
+}
+
+Table user_roles {
+  user_id uuid [ref: > users.id]
+  role_id int [ref: > roles.id]
+  assigned_at timestamp [default: `now()`]
+
+  indexes {
+    (user_id, role_id) [pk]
+  }
+}
+
+// ==========================================
+// GESTÃO DE CLUBES (COMMUNITY)
+// ==========================================
+
+Table clubs {
+  id uuid [pk]
+  name varchar(100) [not null, unique]
+  description text
+  logo_url varchar(255)
+  owner_id uuid [ref: > users.id, note: "Presidente/Criador do clube"]
+  total_points int [default: 0, note: "Soma de pontos do clube"]
+  active boolean [default: true]
+  created_at timestamp [default: `now()`]
+
+  Note: "Equipes fixas para fidelização e rankings."
+}
+
+Table club_members {
+  club_id uuid [ref: > clubs.id]
+  user_id uuid [ref: > users.id]
+  joined_at timestamp [default: `now()`]
+  member_role varchar(20) [default: 'MEMBER', note: "CAPTAIN, MEMBER"]
+
+  indexes {
+    (club_id, user_id) [pk]
+  }
+}
+
+// ==========================================
+// GESTÃO ESPACIAL E LOCALIDADES
+// ==========================================
+
+Table locations {
+  id uuid [pk]
+  name varchar(100) [not null]
+  latitude decimal(9,6) [not null]
+  longitude decimal(9,6) [not null]
+  is_official boolean [default: true, note: "Define se é uma praça homologada"]
+  active boolean [default: true]
+  
+  Note: "Cadastro de campos e praças públicas."
+}
+
+Table addresses {
+  id uuid [pk]
+  location_id uuid [ref: - locations.id]
+  street varchar(255)
+  neighborhood varchar(100)
+  city varchar(100) [default: "Recife"]
+  postal_code varchar(20)
+}
+
+// ==========================================
+// CORE DE NEGÓCIO: PARTIDAS (SOCCER)
+// ==========================================
+
+Table matches {
+  id uuid [pk]
+  moderator_id uuid [ref: > users.id, note: "Moderador responsável"]
+  location_id uuid [ref: > locations.id]
+  club_home_id uuid [ref: > clubs.id, note: "Opcional: Clube mandante"]
+  club_away_id uuid [ref: > clubs.id, note: "Opcional: Clube visitante"]
+  scheduled_time timestamp [not null]
+  actual_start_time timestamp
+  actual_end_time timestamp
+  status varchar(20) [note: "SCHEDULED, LIVE, FINISHED, CANCELED"]
+  score_home int [default: 0]
+  score_away int [default: 0]
+  created_at timestamp [default: `now()`]
+  
+  Note: "Registro principal da partida. Suporta confrontos entre Clubes ou Equipes Temporárias."
+}
+
+Table match_roster {
+  id uuid [pk]
+  match_id uuid [ref: > matches.id]
+  player_id uuid [ref: > users.id]
+  team_side varchar(10) [note: "HOME ou AWAY"]
+  player_type varchar(20) [note: "CLUB_MEMBER, TEMPORARY, GUEST"]
+  check_in_time timestamp
+  performance_rating decimal(3,2) [note: "Avaliação do moderador"]
+
+  indexes {
+    (match_id, player_id) [unique]
+  }
+  
+  Note: "Permite que jogadores temporários preencham vagas de clubes ou formem times do zero."
+}
+
+Table match_events {
+  id bigserial [pk]
+  match_id uuid [ref: > matches.id]
+  player_id uuid [ref: > users.id, note: "Atleta envolvido"]
+  event_type varchar(30) [note: "GOAL, FOUL, YELLOW_CARD, RED_CARD"]
+  minute_offset int [note: "Minuto da ocorrência"]
+  video_evidence_url varchar(255) [note: "Link para provas"]
+  created_at timestamp [default: `now()`]
+}
+
+// ==========================================
+// SISTEMA DE INTEGRIDADE E DENÚNCIAS
+// ==========================================
+
+Table reports {
+  id uuid [pk]
+  match_id uuid [ref: > matches.id]
+  reporter_id uuid [ref: > users.id, note: "Jogador denunciante"]
+  reported_moderator_id uuid [ref: > users.id]
+  reason text [not null]
+  evidence_url varchar(255)
+  status varchar(20) [note: "PENDING, UNDER_REVIEW, VALIDATED, DISMISSED"]
+  judgment_notes text
+  created_at timestamp [default: `now()`]
+
+  Note: "Denúncias contra a moderação com provas."
+}
+
+// Schema de Collection no MongoDB dos db-points
+
+Table products {
+  _id varchar [pk]              // ObjectId representado como string
+  name varchar
+  category varchar
+  description varchar
+  points_cost int
+  stock_quantity int
+  active boolean
+  created_at datetime
+  updated_at datetime
+}
+
+Table transactions {
+  _id varchar [pk]              // ObjectId representado como string
+  user_id varchar
+  user_role varchar
+  points_base int
+  bonus_percentage int
+  points_final int
+  money_value float
+  transaction_type varchar
+  status varchar
+  created_at datetime
+}
+
