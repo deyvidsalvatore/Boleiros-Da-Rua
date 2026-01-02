@@ -222,3 +222,22 @@ O campo status permite controle operacional:
 - `CONFIRMED` - Quando finalizado uma compra.
 - `PENDING` - Pendente do pagamento de pontos, quando não apertou em 'Confirmar'.
 - `CANCELED` - Cancelado por optar 'Cancelar a compra'.
+
+### 9. Repositório de Configuração
+O `boleiros-config-server` atua como o cérebro administrativo da infraestrutura, permitindo a gestão centralizada de todas as propriedades de configuração dos microserviços em um único local seguro
+#### 9.1 Repositório de Configurações
+As configurações não residem dentro do código-fonte dos serviços, mas sim em um repositório Git privado dedicado: `boleiros-da-rua-config-repo`. Isso permite alterar parâmetros do sistema (como chaves de API, credenciais de banco ou níveis de log) em tempo de execução, sem a necessidade de novos builds ou deploys.
+
+#### 9.2 Estrutura de Ambientes
+![Repo de Configuração](docs/Config-Repo.png)
+O servidor está configurado para servir propriedades baseadas no ambiente de execução (profile), organizado pelas seguintes pastas no repositório:
+
+- `dev/`: Configurações para ambiente de desenvolvimento local.
+- `homol/`: Ambiente de homologação para testes integrados.
+- `prod/`: Configurações críticas para o ambiente de produção.
+
+#### 9.3 Fluxo de Inicialização
+Ao iniciar, o microserviço (ex: ms-soccer) consulta o Config Server na porta 8888.
+- O Config Server busca os arquivos .yml ou .properties correspondentes no repositório Git.
+- As propriedades são injetadas no contexto do Spring Boot do microserviço.
+- Caso o repositório seja atualizado, os serviços podem realizar o refresh das configurações via Actuator sem reiniciar.
